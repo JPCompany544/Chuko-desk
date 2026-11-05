@@ -1,0 +1,30 @@
+{
+  "name": "chuko-desk",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx tests/desk.test.ts"
+  },
+  "dependencies": {
+    "next": "16.4.5",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "server-only": "0.0.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "4.3.4",
+    "@types/node": "22.19.1",
+    "@types/react": "19.2.2",
+    "@types/react-dom": "19.2.2",
+    "eslint": "9.39.1",
+    "eslint-config-next": "16.4.5",
+    "tailwindcss": "4.3.4",
+    "tsx": "^4.20.6",
+    "typescript": "5.9.3"
+  }
+}
