@@ -6,8 +6,8 @@ export default function SellPage() {
     <>
       <PageHeader
         kicker="Sell"
-        title="Open an address, then mock the deposit."
-        lede="Generate a permanent Breet deposit address for a sandbox asset. Mock trade credits that address without sending real crypto."
+        title="Take a crypto deposit."
+        lede="Choose a token, then its network, and generate a permanent Breet address. A sandbox mock deposit stays available after the address exists."
       />
       <SellDesk />
     </>

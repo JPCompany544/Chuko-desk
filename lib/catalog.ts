@@ -1,6 +1,10 @@
 import { BUY_NETWORKS } from "@/lib/validate";
 import type {
   DepositAsset,
+  DepositCatalogSource,
+  DepositGroupId,
+  DepositSection,
+  DepositTokenOption,
   DeskAccount,
   DeskWallet,
   StableToken,
@@ -98,32 +102,204 @@ export function tokenFromCatalog(
   return catalog.tokens.find((token) => token.symbol === symbol);
 }
 
+const NATIVE_ORDER = ["BTC", "ETH", "SOL", "TRX", "BNB", "AVAX", "LTC", "BCH", "DOGE", "TON", "XRP"];
+const GROUP_ORDER: DepositGroupId[] = ["native", "USDT", "USDC"];
+const STABLE_NETWORKS: Record<string, readonly string[]> = {
+  USDT: ["TRC20", "ERC20", "Solana", "BSC", "Polygon", "TON"],
+  USDC: ["ERC20", "Solana", "Arbitrum", "Base", "Polygon"],
+};
+
+type CatalogSeed = {
+  id: string;
+  name: string;
+  symbol: string;
+  network: string;
+  minimum: number;
+};
+
+const MAINNET_SEEDS: CatalogSeed[] = [
+  { id: "BTC", name: "Bitcoin", symbol: "BTC", network: "Bitcoin", minimum: 2 },
+  { id: "ETH", name: "Ethereum", symbol: "ETH", network: "Ethereum", minimum: 5 },
+  { id: "SOL", name: "Solana", symbol: "SOL", network: "Solana", minimum: 5 },
+  { id: "TRX", name: "Tron", symbol: "TRX", network: "Tron", minimum: 5 },
+  { id: "BNB_BSC", name: "BNB", symbol: "BNB", network: "BNB Smart Chain", minimum: 5 },
+  { id: "AVAX", name: "Avalanche", symbol: "AVAX", network: "Avalanche", minimum: 5 },
+  { id: "LTC", name: "Litecoin", symbol: "LTC", network: "Litecoin", minimum: 2 },
+  { id: "BCH", name: "Bitcoin Cash", symbol: "BCH", network: "Bitcoin Cash", minimum: 2 },
+  { id: "DOGE", name: "Dogecoin", symbol: "DOGE", network: "Dogecoin", minimum: 2 },
+  { id: "TON", name: "TON", symbol: "TON", network: "TON", minimum: 2 },
+  { id: "XRP", name: "XRP", symbol: "XRP", network: "XRP", minimum: 2 },
+  { id: "TRX_USDT_S2UZ", name: "USDT", symbol: "USDT", network: "TRC20", minimum: 10 },
+  { id: "USDT_ERC20", name: "USDT", symbol: "USDT", network: "ERC20", minimum: 5 },
+  { id: "SOL_USDT_EWAY", name: "USDT", symbol: "USDT", network: "Solana", minimum: 5 },
+  { id: "USDT_BSC", name: "USDT", symbol: "USDT", network: "BSC", minimum: 5 },
+  { id: "USDT_POLYGON", name: "USDT", symbol: "USDT", network: "Polygon", minimum: 5 },
+  { id: "USDT_TON", name: "USDT", symbol: "USDT", network: "TON", minimum: 5 },
+  { id: "USDC", name: "USDC", symbol: "USDC", network: "ERC20", minimum: 5 },
+  { id: "SOL_USDC_PTHX", name: "USDC", symbol: "USDC", network: "Solana", minimum: 5 },
+  { id: "USDC_ARB_3SBJ", name: "USDC", symbol: "USDC", network: "Arbitrum", minimum: 5 },
+  { id: "USDC_BASECHAIN_ETH_5I5C", name: "USDC", symbol: "USDC", network: "Base", minimum: 5 },
+  { id: "USDC_POLYGON_NXTB", name: "USDC", symbol: "USDC", network: "Polygon", minimum: 5 },
+];
+
+const SANDBOX_SEEDS: CatalogSeed[] = [
+  { id: "BTC_TEST", name: "Bitcoin", symbol: "BTC", network: "Bitcoin", minimum: 5 },
+  { id: "ETH_TEST5", name: "Ethereum", symbol: "ETH", network: "Ethereum", minimum: 5 },
+  { id: "SOL_TEST", name: "Solana", symbol: "SOL", network: "Solana", minimum: 5 },
+  { id: "TRX_TEST", name: "Tron", symbol: "TRX", network: "Tron", minimum: 5 },
+  { id: "BNB_TEST", name: "BNB", symbol: "BNB", network: "BNB Smart Chain", minimum: 5 },
+  { id: "AVAXTEST", name: "Avalanche", symbol: "AVAX", network: "Avalanche", minimum: 5 },
+  { id: "LTC_TEST", name: "Litecoin", symbol: "LTC", network: "Litecoin", minimum: 5 },
+  { id: "BCH_TEST", name: "Bitcoin Cash", symbol: "BCH", network: "Bitcoin Cash", minimum: 5 },
+  { id: "DOGE_TEST", name: "Dogecoin", symbol: "DOGE", network: "Dogecoin", minimum: 5 },
+  { id: "TON_TEST", name: "TON", symbol: "TON", network: "TON", minimum: 5 },
+  { id: "XRP_TEST", name: "XRP", symbol: "XRP", network: "XRP", minimum: 5 },
+  { id: "USDT_TRX_TEST2", name: "USDT", symbol: "USDT", network: "TRC20", minimum: 5 },
+  { id: "USDT_ETH_TEST5_WFZR", name: "USDT", symbol: "USDT", network: "ERC20", minimum: 5 },
+  { id: "USDT_B7ZDHS8D_TOR7", name: "USDT", symbol: "USDT", network: "Solana", minimum: 5 },
+  { id: "USDT_BSC_TEST", name: "USDT", symbol: "USDT", network: "BSC", minimum: 5 },
+  { id: "USD_POLYGON_TEST_MUMBAI_QFXA", name: "USDT", symbol: "USDT", network: "Polygon", minimum: 5 },
+  { id: "USDTTT_TON_TEST", name: "USDT", symbol: "USDT", network: "TON", minimum: 5 },
+  { id: "USDC_ETH_TEST5_0GER", name: "USDC", symbol: "USDC", network: "ERC20", minimum: 5 },
+  { id: "SOL_USDC_JKVK", name: "USDC", symbol: "USDC", network: "Solana", minimum: 5 },
+  { id: "USDC_ARB_SEPOLIA_V84S", name: "USDC", symbol: "USDC", network: "Arbitrum", minimum: 5 },
+  { id: "USDC_BASECHAIN_ETH_TEST5_8SH8", name: "USDC", symbol: "USDC", network: "Base", minimum: 5 },
+  { id: "USDC_AMOY_POLYGON_TEST_7WWV", name: "USDC", symbol: "USDC", network: "Polygon", minimum: 5 },
+];
+
+function orderIndex(list: readonly string[], value: string): number {
+  const index = list.indexOf(value);
+  return index === -1 ? list.length : index;
+}
+
+export function normalizeDepositSymbol(raw: string): string {
+  const upper = raw.trim().toUpperCase();
+  if (!upper) return "";
+  if (upper === "BNB" || upper === "BNB_BSC" || upper === "BNB_TEST") return "BNB";
+  if (upper.includes("USDC")) return "USDC";
+  if (upper.includes("USDT") || upper.startsWith("USDTTT") || upper.startsWith("USD_POLYGON")) {
+    return "USDT";
+  }
+  const head = upper.split("_")[0] ?? upper;
+  const native = head.replace(/TEST\d*$/, "");
+  if (NATIVE_ORDER.includes(native)) return native;
+  if (NATIVE_ORDER.includes(upper)) return upper;
+  return upper;
+}
+
+export function networkLabelFor(symbol: string, network: string, name = ""): string {
+  const token = normalizeDepositSymbol(symbol);
+  const raw = network.trim();
+  const haystack = `${raw} ${name}`.toLowerCase().replace(/[_-]+/g, " ");
+
+  if (token === "USDT" || token === "USDC") {
+    if (/\b(arbitrum|arb)\b/.test(haystack)) return "Arbitrum";
+    if (/\bbase\b/.test(haystack)) return "Base";
+    if (/\b(polygon|matic)\b/.test(haystack)) return "Polygon";
+    if (/\b(solana|sol)\b/.test(haystack)) return "Solana";
+    if (/\b(bsc|bnb)\b/.test(haystack) || haystack.includes("smart chain")) return "BSC";
+    if (/\b(ton|telegram)\b/.test(haystack) || haystack.includes("open network")) return "TON";
+    if (/\b(trc20|tron|trx)\b/.test(haystack)) return "TRC20";
+    if (/\b(erc20|ethereum|eth)\b/.test(haystack)) return "ERC20";
+  }
+
+  if (!raw) return name || token;
+  return raw.replace(/[_-]+/g, " ");
+}
+
+function depositGroup(symbol: string): DepositGroupId {
+  if (symbol === "USDT" || symbol === "USDC") return symbol;
+  return "native";
+}
+
+function compareAssets(a: DepositAsset, b: DepositAsset): number {
+  const byGroup = orderIndex(GROUP_ORDER, depositGroup(a.symbol)) - orderIndex(GROUP_ORDER, depositGroup(b.symbol));
+  if (byGroup !== 0) return byGroup;
+  const byToken = orderIndex(NATIVE_ORDER, a.symbol) - orderIndex(NATIVE_ORDER, b.symbol);
+  if (byToken !== 0) return byToken;
+  if (a.symbol !== b.symbol) return a.symbol.localeCompare(b.symbol);
+  const networkOrder = STABLE_NETWORKS[a.symbol] ?? [];
+  const byNetwork = orderIndex(networkOrder, a.networkLabel) - orderIndex(networkOrder, b.networkLabel);
+  if (byNetwork !== 0) return byNetwork;
+  return a.networkLabel.localeCompare(b.networkLabel) || a.name.localeCompare(b.name);
+}
+
+function seedAsset(seed: CatalogSeed): DepositAsset {
+  const symbol = normalizeDepositSymbol(seed.symbol);
+  return {
+    id: seed.id,
+    name: seed.name,
+    identifier: seed.id,
+    symbol,
+    network: seed.network,
+    networkLabel: networkLabelFor(symbol, seed.network, seed.name),
+    minimum: seed.minimum,
+    isActive: true,
+  };
+}
+
+export function fallbackDepositAssets(env: "sandbox" | "production"): DepositAsset[] {
+  const seeds = env === "production" ? MAINNET_SEEDS : SANDBOX_SEEDS;
+  return seeds.map(seedAsset).sort(compareAssets);
+}
+
+export function resolveDepositAssets(
+  live: DepositAsset[] | null,
+  env: "sandbox" | "production",
+): { source: DepositCatalogSource; assets: DepositAsset[] } {
+  if (live && live.length > 0) return { source: "breet", assets: live };
+  return { source: "fallback", assets: fallbackDepositAssets(env) };
+}
+
+export function groupDepositAssets(assets: DepositAsset[]): DepositSection[] {
+  const bySymbol = new Map<string, DepositAsset[]>();
+  for (const asset of assets) {
+    const list = bySymbol.get(asset.symbol) ?? [];
+    list.push(asset);
+    bySymbol.set(asset.symbol, list);
+  }
+
+  const tokens: DepositTokenOption[] = [...bySymbol.entries()].map(([symbol, list]) => ({
+    symbol,
+    group: depositGroup(symbol),
+    assets: [...list].sort(compareAssets),
+  }));
+  tokens.sort((a, b) => compareAssets(a.assets[0]!, b.assets[0]!));
+
+  return GROUP_ORDER.flatMap((id) => {
+    const sectionTokens = tokens.filter((token) => token.group === id);
+    if (sectionTokens.length === 0) return [];
+    const title = id === "native" ? "Native" : id;
+    return [{ id, title, tokens: sectionTokens }];
+  });
+}
+
 export function toDepositAssets(data: unknown): DepositAsset[] {
   if (!Array.isArray(data)) return [];
   const assets: DepositAsset[] = [];
   for (const entry of data) {
     const row = record(entry);
-    const id = text(row.id);
-    const identifier = text(row.identifier);
-    const name = text(row.name);
-    if (!id || !identifier || !name) continue;
+    const rawId = text(row.id);
+    const rawIdentifier = text(row.identifier);
+    const identifier = rawIdentifier ?? rawId;
+    const id = rawId ?? rawIdentifier;
+    if (!id || !identifier) continue;
+    const symbol = normalizeDepositSymbol(text(row.symbol) ?? identifier);
+    if (!symbol) continue;
+    const network = text(row.network) ?? "";
+    const name = text(row.name) ?? [symbol, network.replace(/[_-]+/g, " ")].filter(Boolean).join(" ");
     assets.push({
       id,
       name,
       identifier,
-      symbol: text(row.symbol) ?? identifier,
-      network: text(row.network) ?? "",
+      symbol,
+      network,
+      networkLabel: networkLabelFor(symbol, network, name),
       minimum: num(row.minimum),
       isActive: row.isActive !== false,
     });
   }
-  return assets.sort((a, b) => {
-    const rank = (asset: DepositAsset) =>
-      asset.symbol === "USDT" || asset.symbol === "USDC" ? 0 : 1;
-    const bySymbol = rank(a) - rank(b);
-    if (bySymbol !== 0) return bySymbol;
-    return a.name.localeCompare(b.name);
-  });
+  return assets.sort(compareAssets);
 }
 
 export function toWallets(data: unknown): DeskWallet[] {

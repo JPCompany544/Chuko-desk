@@ -68,8 +68,8 @@ export function Overview() {
         </Link>
         <Link href="/sell" className="panel link-card">
           <p className="eyebrow">Sell</p>
-          <h2>Generate and mock</h2>
-          <p className="quiet">Create a deposit address, then simulate an incoming sandbox trade.</p>
+          <h2>Open a deposit address</h2>
+          <p className="quiet">Pick a token and network, then generate a Breet deposit address.</p>
         </Link>
       </section>
       <section className="panel">

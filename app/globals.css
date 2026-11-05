@@ -286,6 +286,88 @@ select:focus {
   background: rgba(230, 161, 90, 0.12);
 }
 
+.choice:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.choice-sell[aria-pressed="true"] {
+  border-color: var(--sell);
+  background: rgba(60, 190, 140, 0.16);
+}
+
+.asset-groups,
+.asset-group {
+  display: grid;
+  gap: 10px;
+}
+
+.asset-groups {
+  gap: 18px;
+}
+
+.group-label {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.token-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
+  gap: 8px;
+}
+
+.token-grid .choice {
+  min-width: 0;
+}
+
+.address-card {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #101510;
+}
+
+.address-card .mono {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.summary-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  align-items: baseline;
+}
+
+.summary-line h2 {
+  margin: 0;
+}
+
+.mock-details summary {
+  width: fit-content;
+  font-size: 1.15rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.mock-details .form {
+  margin-top: 14px;
+}
+
+.asset-groups,
+.network-choices {
+  margin-top: 14px;
+}
+
 .btn {
   border: 0;
   border-radius: 999px;
@@ -483,5 +565,10 @@ select:focus {
 
   .feed-amount {
     text-align: left;
+  }
+
+  .address-card {
+    align-items: stretch;
+    flex-direction: column;
   }
 }
