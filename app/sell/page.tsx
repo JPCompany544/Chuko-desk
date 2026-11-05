@@ -7,7 +7,7 @@ export default function SellPage() {
       <PageHeader
         kicker="Sell"
         title="Take a crypto deposit."
-        lede="Choose a token, then its network, and generate a permanent Breet address. A sandbox mock deposit stays available after the address exists."
+        lede="Choose a token, then a network when the token has more than one. Breet creates the deposit address for that asset."
       />
       <SellDesk />
     </>

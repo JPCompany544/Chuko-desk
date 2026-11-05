@@ -3,12 +3,13 @@ import "server-only";
 import { NextResponse } from "next/server";
 
 import { BreetError } from "@/lib/breet";
+import { explainFailure } from "@/lib/errors";
 
 export function jsonError(error: unknown) {
   if (error instanceof BreetError) {
     const status = error.status >= 400 && error.status <= 599 ? error.status : 502;
     return NextResponse.json(
-      { ok: false as const, message: error.message, errors: error.errors },
+      { ok: false as const, message: explainFailure(error.message, error.errors), errors: error.errors },
       { status },
     );
   }
