@@ -54,14 +54,31 @@ export type WithdrawalCatalog = {
   source: "breet" | "fallback";
 };
 
+export type DepositCatalogSource = "breet" | "fallback";
+
 export type DepositAsset = {
   id: string;
   name: string;
   identifier: string;
   symbol: string;
   network: string;
+  networkLabel: string;
   minimum: number | null;
   isActive: boolean;
+};
+
+export type DepositGroupId = "native" | "USDT" | "USDC";
+
+export type DepositTokenOption = {
+  symbol: string;
+  group: DepositGroupId;
+  assets: DepositAsset[];
+};
+
+export type DepositSection = {
+  id: DepositGroupId;
+  title: string;
+  tokens: DepositTokenOption[];
 };
 
 export type DeskWallet = {
