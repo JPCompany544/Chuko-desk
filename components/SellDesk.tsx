@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 
 import { Notice } from "@/components/Notice";
 import { fallbackDepositAssets, groupDepositAssets } from "@/lib/catalog";
@@ -33,14 +33,12 @@ export function SellDesk() {
   const [mockEnabled, setMockEnabled] = useState(true);
   const [symbol, setSymbol] = useState("");
   const [assetKey, setAssetKey] = useState("");
-  const [label, setLabel] = useState("");
   const [address, setAddress] = useState("");
   const [identifier, setIdentifier] = useState("");
   const [amountInUSD, setAmountInUSD] = useState("50");
   const [cryptoReceived, setCryptoReceived] = useState("50");
   const [addressError, setAddressError] = useState<string | null>(null);
   const [tradeError, setTradeError] = useState<string | null>(null);
-  const [addressResult, setAddressResult] = useState<AddressResult | null>(null);
   const [tradeResult, setTradeResult] = useState<MockTradeResult | null>(null);
   const [pendingAddress, setPendingAddress] = useState(false);
   const [pendingTrade, setPendingTrade] = useState(false);
@@ -87,6 +85,7 @@ export function SellDesk() {
   const token = tokens.find((entry) => entry.symbol === symbol) ?? null;
   const selected = token?.assets.find((asset) => asset.identifier === assetKey) ?? null;
   const selectedIdentifier = selected?.identifier;
+  const selectionIntent = useRef<"generate" | "reuse">("generate");
   const orderedWallets = selectedIdentifier
     ? [...wallets].sort((a, b) => {
         const rank = (wallet: DeskWallet) => (wallet.identifier === selectedIdentifier ? 0 : 1);
@@ -96,7 +95,6 @@ export function SellDesk() {
 
   function clearDestination() {
     setAddress("");
-    setAddressResult(null);
     setAddressError(null);
     setTradeResult(null);
     setTradeError(null);
@@ -107,21 +105,26 @@ export function SellDesk() {
     const next = tokens.find((entry) => entry.symbol === nextSymbol);
     const active = next?.assets.filter((asset) => asset.isActive) ?? [];
     const only = active.length === 1 ? active[0] : undefined;
+    selectionIntent.current = "generate";
     setSymbol(nextSymbol);
     setAssetKey(only?.identifier ?? "");
     setIdentifier(only?.identifier ?? "");
+    setPendingAddress(Boolean(only));
     clearDestination();
   }
 
   function selectNetwork(asset: DepositAsset) {
     if (!asset.isActive) return;
+    selectionIntent.current = "generate";
     setSymbol(asset.symbol);
     setAssetKey(asset.identifier);
     setIdentifier(asset.identifier);
+    setPendingAddress(true);
     clearDestination();
   }
 
   function chooseWallet(wallet: DeskWallet) {
+    selectionIntent.current = "reuse";
     const match =
       assets.find((asset) => asset.identifier === wallet.identifier) ??
       assets.find((asset) => asset.id === wallet.assetId);
@@ -132,41 +135,49 @@ export function SellDesk() {
     } else {
       setIdentifier(wallet.identifier);
     }
+    setPendingAddress(false);
     setAddress(wallet.address);
-    setAddressResult(null);
     setAddressError(null);
     setTradeResult(null);
     setTradeError(null);
     setCopied(false);
   }
 
-  async function onGenerate(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!selected) return;
-    setPendingAddress(true);
-    setAddressError(null);
-    setAddressResult(null);
-    try {
-      const result = await postJson<{ address: AddressResult }>("/api/sell/address", {
-        // Generate-address takes the asset identifier (BTC_TEST, TRX_USDT_S2UZ).
-        assetId: selected.identifier,
-        label,
-      });
-      if (!result.ok) {
-        setAddressError(result.message);
-        return;
-      }
-      setAddressResult(result.address);
-      setAddress(result.address.address);
-      setIdentifier(selected.identifier);
-      const walletsResult = await getJson<{ wallets: DeskWallet[] }>("/api/sell/wallets");
-      if (walletsResult.ok) setWallets(walletsResult.wallets);
-    } catch {
-      setAddressError("Could not generate an address.");
-    } finally {
-      setPendingAddress(false);
+  useEffect(() => {
+    if (!selected?.isActive || selectionIntent.current !== "generate") {
+      return;
     }
-  }
+    const asset = selected;
+    const controller = new AbortController();
+    setPendingAddress(true);
+    setAddress("");
+    setAddressError(null);
+    setCopied(false);
+    setIdentifier(asset.identifier);
+    postJson<{ address: AddressResult }>(
+      "/api/sell/address",
+      { assetId: asset.id },
+      controller.signal,
+    )
+      .then(async (result) => {
+        if (controller.signal.aborted) return;
+        if (!result.ok) {
+          setAddressError(result.message);
+          return;
+        }
+        setAddress(result.address.address);
+        setIdentifier(asset.identifier);
+        const walletsResult = await getJson<{ wallets: DeskWallet[] }>("/api/sell/wallets");
+        if (!controller.signal.aborted && walletsResult.ok) setWallets(walletsResult.wallets);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setAddressError("Could not generate an address.");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setPendingAddress(false);
+      });
+    return () => controller.abort();
+  }, [selected]);
 
   async function onMock(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -286,7 +297,7 @@ export function SellDesk() {
       ) : null}
 
       {selected ? (
-        <form className="panel form" onSubmit={onGenerate}>
+        <section className="panel" aria-live="polite" aria-busy={pendingAddress}>
           <div className="summary-line">
             <h2>Deposit address</h2>
             <p className="quiet">
@@ -295,22 +306,8 @@ export function SellDesk() {
             </p>
           </div>
           <p className="quiet mono">{selected.identifier}</p>
-          <label className="field">
-            <span className="field-label">Label</span>
-            <input
-              value={label}
-              onChange={(event) => setLabel(event.target.value)}
-              placeholder="customer-1042"
-              autoComplete="off"
-              required
-            />
-            <span className="field-hint">One label per asset. Pick an existing wallet below if that label already has an address.</span>
-          </label>
-          <button className="btn btn-sell" type="submit" disabled={pendingAddress || !selected.isActive}>
-            {pendingAddress ? "Generating…" : "Generate address"}
-          </button>
+          {pendingAddress ? <p className="quiet">Creating the Breet deposit address…</p> : null}
           {addressError ? <Notice tone="error">{addressError}</Notice> : null}
-          {addressResult ? <Notice tone="ok">{addressResult.message}</Notice> : null}
           {address ? (
             <div className="address-card">
               <p className="mono">{address}</p>
@@ -318,15 +315,13 @@ export function SellDesk() {
                 {copied ? "Copied" : "Copy"}
               </button>
             </div>
-          ) : (
-            <p className="quiet">The address is permanent. Generate it once for this label, then copy it.</p>
-          )}
-        </form>
+          ) : null}
+        </section>
       ) : null}
 
       <section className="panel">
         <h2>Existing wallets</h2>
-        <p className="quiet">Select one to reuse its address for this asset.</p>
+        <p className="quiet">Select one to show an address Breet already issued.</p>
         {orderedWallets.length === 0 ? (
           <p className="quiet">No wallets yet.</p>
         ) : (

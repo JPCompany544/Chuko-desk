@@ -78,13 +78,22 @@ export function parseBuyInput(body: unknown): Parsed<BuyInput> {
   return { ok: true, value: { token, network, amount, walletAddress } };
 }
 
+export function createDeskLabel(now = Date.now(), rand = Math.random()): string {
+  const stamp = Math.floor(now).toString(36);
+  const noise = Math.floor(rand * 36 ** 6)
+    .toString(36)
+    .padStart(6, "0");
+  return `chuko-${stamp}-${noise}`.slice(0, 64);
+}
+
 export function parseAddressInput(body: unknown): Parsed<AddressInput> {
   const row = record(body);
   const assetId = typeof row.assetId === "string" ? row.assetId.trim() : "";
-  const label = typeof row.label === "string" ? row.label.trim() : "";
+  const provided = typeof row.label === "string" ? row.label.trim() : "";
   if (!ID_RE.test(assetId)) {
     return { ok: false, message: "Choose a deposit asset." };
   }
+  const label = provided || createDeskLabel();
   if (!LABEL_RE.test(label)) {
     return {
       ok: false,

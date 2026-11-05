@@ -5,7 +5,7 @@ Sandbox desk for buying and selling stablecoins through the [Breet API](https://
 ## Desk
 
 - **Buy** withdraws USDT or USDC to an external wallet (`POST /payments/withdraw/address`). Networks and fees come from `GET /payments/supported-assets-info`. USDT can use ERC20, TRC20, BSC, SOL, and TON. USDC can use ERC20, TRC20, BSC, SOL, and BASE.
-- **Sell** lists deposit assets from `GET /trades/assets` (native coins, USDT, and USDC on each network) and generates a permanent address with `POST /trades/sell/assets/{id}/generate-address`. If that call fails, the desk shows the documented catalog, including sandbox testnet ids when `X-Breet-Env` is `sandbox`. `POST /trades/sell/mock-trade` can simulate a deposit in sandbox only.
+- **Sell** lists deposit assets from `GET /trades/assets` (native coins, USDT, and USDC on each network). Choosing a token and, when needed, a network calls `POST /trades/sell/assets/{id}/generate-address` with that asset’s record id and `X-Breet-Env`. If the asset list fails, the desk shows the documented catalog, including sandbox testnet ids when the env is `sandbox`. `POST /trades/sell/mock-trade` can simulate a deposit in sandbox only.
 - **Activity** lists crypto deposits (`GET /trades/transactions`) and withdrawals (`GET /payments/withdrawals`).
 
 ## Setup

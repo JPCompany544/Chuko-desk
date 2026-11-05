@@ -274,6 +274,16 @@ export function groupDepositAssets(assets: DepositAsset[]): DepositSection[] {
   });
 }
 
+const RECORD_ID = /^[a-f0-9]{24}$/i;
+
+export function recordIdForAsset(requested: string, assets: DepositAsset[]): string {
+  const assetId = requested.trim();
+  if (RECORD_ID.test(assetId)) return assetId;
+  const match = assets.find((asset) => asset.identifier === assetId || asset.id === assetId);
+  if (match && RECORD_ID.test(match.id)) return match.id;
+  return assetId;
+}
+
 export function toDepositAssets(data: unknown): DepositAsset[] {
   if (!Array.isArray(data)) return [];
   const assets: DepositAsset[] = [];

@@ -2,7 +2,13 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 
-import { toDepositAssets, toPublicAccount, toWallets, toWithdrawalCatalog } from "@/lib/catalog";
+import {
+  recordIdForAsset,
+  toDepositAssets,
+  toPublicAccount,
+  toWallets,
+  toWithdrawalCatalog,
+} from "@/lib/catalog";
 import type {
   AddressResult,
   BuyResult,
@@ -186,9 +192,19 @@ export async function getWallets(page = 1): Promise<{ wallets: DeskWallet[]; met
   return { wallets: toWallets(result.data), meta: result.meta };
 }
 
+async function canonicalAssetId(assetId: string): Promise<string> {
+  if (/^[a-f0-9]{24}$/i.test(assetId)) return assetId;
+  try {
+    return recordIdForAsset(assetId, await getDepositAssets());
+  } catch {
+    return assetId;
+  }
+}
+
 export async function generateAddress(input: AddressInput): Promise<AddressResult> {
+  const assetId = await canonicalAssetId(input.assetId);
   const result = await breetRequest<{ id?: string; address?: string }>(
-    `/trades/sell/assets/${encodeURIComponent(input.assetId)}/generate-address`,
+    `/trades/sell/assets/${encodeURIComponent(assetId)}/generate-address`,
     { body: { label: input.label } },
   );
   const address = result.data?.address;
@@ -199,7 +215,7 @@ export async function generateAddress(input: AddressInput): Promise<AddressResul
     id: typeof result.data?.id === "string" ? result.data.id : null,
     address,
     label: input.label,
-    assetId: input.assetId,
+    assetId,
     message: result.message,
   };
 }

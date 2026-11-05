@@ -1,10 +1,15 @@
 export type ApiResult<T> = ({ ok: true } & T) | { ok: false; message: string };
 
-export async function postJson<T>(path: string, body: unknown): Promise<ApiResult<T>> {
+export async function postJson<T>(
+  path: string,
+  body: unknown,
+  signal?: AbortSignal,
+): Promise<ApiResult<T>> {
   const response = await fetch(path, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     body: JSON.stringify(body),
+    signal,
   });
   return (await response.json()) as ApiResult<T>;
 }

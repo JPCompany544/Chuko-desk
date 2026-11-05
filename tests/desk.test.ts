@@ -5,12 +5,14 @@ import { mapDeposits, mapWithdrawals, mergeActivity } from "../lib/activity.ts";
 import {
   fallbackDepositAssets,
   groupDepositAssets,
+  recordIdForAsset,
   resolveDepositAssets,
   toDepositAssets,
   toPublicAccount,
   toWithdrawalCatalog,
 } from "../lib/catalog.ts";
-import { parseBuyInput, parseMockTradeInput } from "../lib/validate.ts";
+import { explainFailure } from "../lib/errors.ts";
+import { parseAddressInput, parseBuyInput, parseMockTradeInput } from "../lib/validate.ts";
 
 test("public account drops secrets and contact fields", () => {
   const account = toPublicAccount({
@@ -197,6 +199,37 @@ test("failed or empty asset calls fall back to the full catalog", () => {
   assert.equal(resolved.source, "breet");
   assert.equal(resolved.assets.length, 1);
   assert.equal(resolveDepositAssets(null, "production").assets[0]?.identifier, "BTC");
+});
+
+test("generate-address uses the asset record id, not the identifier", () => {
+  const assets = toDepositAssets([
+    {
+      id: "69b3e33d5aef202395e800e1",
+      identifier: "USDT_TRX_TEST2",
+      name: "Tether USD",
+      symbol: "USDT",
+      network: "Tron",
+      minimum: 5,
+      isActive: true,
+    },
+  ]);
+  assert.equal(recordIdForAsset("USDT_TRX_TEST2", assets), "69b3e33d5aef202395e800e1");
+  assert.equal(recordIdForAsset("69b3e33d5aef202395e800e1", assets), "69b3e33d5aef202395e800e1");
+  assert.equal(recordIdForAsset("BTC_TEST", []), "BTC_TEST");
+});
+
+test("an omitted address label is created and validation errors keep the field message", () => {
+  const parsed = parseAddressInput({ assetId: "67063f653b4a1f6c7a60ec53" });
+  assert.equal(parsed.ok, true);
+  if (parsed.ok) assert.match(parsed.value.label, /^chuko-[a-z0-9]+-[a-z0-9]+$/);
+  assert.equal(
+    explainFailure("validation errors", [
+      { message: "id is not a valid id", field: "id" },
+      { message: "id is not a valid id", field: "_id" },
+    ]),
+    "id is not a valid id",
+  );
+  assert.equal(explainFailure("Deprecated asset USD_POLYGON_TEST_MUMBAI_QFXA"), "Deprecated asset USD_POLYGON_TEST_MUMBAI_QFXA");
 });
 
 test("activity marks stablecoin withdrawals as buys and deposits as sells", () => {
